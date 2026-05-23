@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+
+  # ── MongoDB ──────────────────────────────────────────
+  mongodb:
+    image: mongo:7.0
+    container_name: healthchat-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - healthchat-network
+
+  # ── Node.js Backend ──────────────────────────────────
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: healthchat-server
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - MONGODB_URI=mongodb://mongodb:27017/healthchat
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRE=7d
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+      - AI_SERVICE_URL=http://ai-service:8000
+      - CLIENT_URL=http://localhost:3000
+    depends_on:
+      - mongodb
+    networks:
+      - healthchat-network
+
+  # ── Python FastAPI AI Service (Gemini Only) ──────────
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: healthchat-ai
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - PORT=8000
+    networks:
+      - healthchat-network
+
+  # ── React Frontend ───────────────────────────────────
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      args:
+        - REACT_APP_API_URL=http://localhost:5000/api
+        - REACT_APP_SOCKET_URL=http://localhost:5000
+    container_name: healthchat-client
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - server
+    networks:
+      - healthchat-network
+
+volumes:
+  mongodb_data:
+
+networks:
+  healthchat-network:
+    driver: bridge

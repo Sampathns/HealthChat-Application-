@@ -1,0 +1,14 @@
+{
+  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.exclude": [
+    "**/.venv/**",
+    "**/venv/**",
+    "**/env/**",
+    "**/site-packages/**"
+  ],
+  "python.analysis.diagnosticSeverityOverrides": {
+    "reportMissingTypeStubs": "none",
+    "reportOptionalMemberAccess": "none",
+    "reportGeneralTypeIssues": "none"
+  }
+}
