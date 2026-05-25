@@ -7,7 +7,8 @@ import google.generativeai as genai
 from typing import List, Dict, Any
 
 # Configure Gemini API
-genai.configure(api_key=os.getenv("GEMINI_API_KEY", ""))
+GEMINI_KEY = os.getenv("GEMINI_API_KEY", "").strip()
+genai.configure(api_key=GEMINI_KEY)
 ai_router = APIRouter()
 class AIService:
     def __init__(self):
