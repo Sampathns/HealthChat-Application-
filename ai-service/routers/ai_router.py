@@ -91,3 +91,23 @@ class AIService:
             }
         except Exception as e:
             raise Exception(f"Failed to fetch recommendations: {str(e)}")
+        
+        # ෆයිල් එකේ අන්තිමට මේ රවුට්ස් ටික එකතු කරන්න:
+ai = AIService()
+
+@ai_router.post("/chat")
+async def chat_endpoint(req: Dict[str, Any]):
+    return await ai.chat(
+        req["message"], 
+        req.get("history", []), 
+        req.get("user_role", "patient"), 
+        req.get("user_name", "User")
+    )
+
+@ai_router.post("/analyze-symptoms")
+async def analyze_endpoint(req: Dict[str, Any]):
+    return await ai.analyze_symptoms(req["symptoms"], req.get("age"), req.get("gender")) # type: ignore
+
+@ai_router.post("/recommendations")
+async def recs_endpoint(req: Dict[str, Any]):
+    return await ai.get_health_recommendations(req.get("conditions", []), req.get("medications", []))

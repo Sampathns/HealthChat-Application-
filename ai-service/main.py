@@ -26,7 +26,7 @@ app.add_middleware(
 )
 
 # Mount AI router
-app.include_router(router, prefix="/ai", tags=["AI — Gemini"])
+app.include_router(router, prefix="/api/ai", tags=["AI — Gemini"])
 
 @app.get("/", tags=["Health"])
 async def root():
