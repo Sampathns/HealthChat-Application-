@@ -7,7 +7,7 @@ const router  = express.Router();
 const axios   = require('axios');
 const { protect } = require('../middleware/auth');
 
-const AI_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+const AI_URL = process.env.AI_SERVICE_URL || 'https://healthchat-application-1.onrender.com';
 
 // All AI routes require login
 router.use(protect);
