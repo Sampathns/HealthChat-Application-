@@ -81,7 +81,7 @@ export default function AIAssistantPage() {
     try {
       const { data } = await aiAPI.chat({ message: text.trim(), history });
       setMessages(prev => prev.map(m => m.id === loadingMsg.id
-        ? { ...m, loading: false, content: data.response }
+        ? { ...m, loading: false, content: data.reply || data.response || 'No response received.' }
         : m
       ));
     } catch (e) {

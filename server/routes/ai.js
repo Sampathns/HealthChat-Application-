@@ -4,7 +4,7 @@ const { protect } = require('../middleware/auth');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const apiKey = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : '';
-const genAI = apiKey ? new GoogleGenerativeAI({ apiKey }) : null;
+const genAI = apiKey ? new GoogleGenerativeAI(apiKey): null;
 
 router.use(protect);
 
