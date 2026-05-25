@@ -1,80 +1,96 @@
 """
-HealthChat AI Router — Google Gemini Only
+HealthChat AI Service — Google Gemini 2.5 Flash Implementation
+==============================================================
+Handles chat, symptom analysis, and health recommendations.
 """
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from typing import List, Optional
-from services.ai_service import AIService
 
-router = APIRouter()
-ai = AIService()   # single shared instance
+import os
+import json
+import google.generativeai as genai
+from typing import List, Dict, Any
 
+# Configure Gemini API
+genai.configure(api_key=os.getenv("GEMINI_API_KEY", ""))
 
-# ── Request models ─────────────────────────────────────────────────────────────
-
-class HistoryItem(BaseModel):
-    role: str       # "user" or "model"
-    content: str
-
-class ChatRequest(BaseModel):
-    message:   str
-    history:   Optional[List[HistoryItem]] = None
-    user_role: Optional[str] = "patient"
-    user_name: Optional[str] = "User"
-
-class SymptomRequest(BaseModel):
-    symptoms: List[str]
-    age:      Optional[int]  = None
-    gender:   Optional[str]  = None
-
-class RecommendationRequest(BaseModel):
-    conditions:  Optional[List[str]] = []
-    medications: Optional[List[str]] = []
-
-
-# ── Endpoints ──────────────────────────────────────────────────────────────────
-
-@router.post("/chat")
-async def gemini_chat(req: ChatRequest):
-    """Chat with HealthAssist AI (Gemini Pro)."""
-    if not req.message or not req.message.strip():
-        raise HTTPException(status_code=400, detail="Message cannot be empty")
-    try:
-        response = await ai.chat(
-            message   = req.message.strip(),
-            history   = req.history or [],
-            user_role = req.user_role or "patient",
-            user_name = req.user_name or "User",
+class AIService:
+    def __init__(self):
+        # ඩොක්ටර් කෙනෙක් වගේ වගකීමෙන් උත්තර දෙන්න AI එකට දෙන ප්‍රධාන උපදෙස (System Instruction)
+        system_prompt = (
+            "You are an expert, empathetic AI healthcare assistant named HealthChat AI. "
+            "Your goal is to provide helpful, accurate, and structured medical information. "
+            "Always maintain a professional yet caring tone. "
+            "CRITICAL: Always include a clear, friendly medical disclaimer stating that your advice "
+            "is for informational purposes only and the user should consult a real doctor for serious conditions."
         )
-        return {"success": True, "response": response, "provider": "gemini"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"AI error: {str(e)}")
-
-
-@router.post("/analyze-symptoms")
-async def analyze_symptoms(req: SymptomRequest):
-    """Analyze symptoms using Gemini and return structured health assessment."""
-    if not req.symptoms:
-        raise HTTPException(status_code=400, detail="At least one symptom is required")
-    try:
-        result = await ai.analyze_symptoms(
-            symptoms = req.symptoms,
-            age      = req.age,
-            gender   = req.gender,
+        
+        # ✅ පරණ gemini-pro වෙනුවට අලුත්ම gemini-2.5-flash එක මෙතනට දැම්මා
+        self.model = genai.GenerativeModel(
+            model_name="gemini-2.5-flash",
+            system_instruction=system_prompt
         )
-        return {"success": True, **result}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Analysis error: {str(e)}")
 
+    async def chat(self, message: str, history: List[Any], user_role: str, user_name: str) -> str:
+        """Handles continuous chat conversations using Gemini 2.5 Flash."""
+        try:
+            # පරණ චැට් හිස්ට්‍රි එක Gemini එකට ගැළපෙන විදිහට සකස් කිරීම
+            gemini_history = []
+            for item in history:
+                # ෆ්‍රන්ට්එන්ඩ් එකෙන් එන role එක 'user' හෝ 'model' (නැත්නම් 'assistant') කියලා ෂුවර් කරගන්නවා
+                role = "user" if item.role == "user" else "model"
+                gemini_history.append({"role": role, "parts": [item.content]})
 
-@router.post("/recommendations")
-async def get_recommendations(req: RecommendationRequest):
-    """Get personalized health recommendations based on conditions and medications."""
-    try:
-        result = await ai.get_health_recommendations(
-            conditions  = req.conditions  or [],
-            medications = req.medications or [],
-        )
-        return {"success": True, **result}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Recommendation error: {str(e)}")
+            # චැට් එක ස්ටාර්ට් කිරීම
+            chat_session = self.model.start_chat(history=gemini_history)
+            
+            # පරිශීලකයාගේ විස්තරත් එක්ක ප්‍රොම්ප්ට් එක සකස් කිරීම
+            context_prompt = f"Patient Name: {user_name}, Role: {user_role}. Message: {message}"
+            
+            response = chat_session.send_message(context_prompt)
+            return response.text
+            
+        except Exception as e:
+            raise Exception(f"Chat generation failed: {str(e)}")
+
+    async def analyze_symptoms(self, symptoms: List[str], age: int = None, gender: str = None) -> Dict[str, Any]:
+        """Analyzes symptoms and returns structured information."""
+        try:
+            symptoms_str = ", ".join(symptoms)
+            prompt = (
+                f"Analyze the following symptoms for a patient. "
+                f"Patient Details — Age: {age if age else 'Not provided'}, Gender: {gender if gender else 'Not provided'}. "
+                f"Symptoms: {symptoms_str}. "
+                f"Provide a structured response. Mention potential causes, urgency level (Low, Medium, High), "
+                f"home remedies if applicable, and next steps."
+            )
+            
+            response = self.model.generate_content(prompt)
+            return {
+                "analysis": response.text,
+                "symptoms_evaluated": symptoms,
+                "urgency_hint": "Please refer to the analysis text for urgency level."
+            }
+        except Exception as e:
+            raise Exception(f"Symptom analysis failed: {str(e)}")
+
+    async def get_health_recommendations(self, conditions: List[str], medications: List[str]) -> Dict[str, Any]:
+        """Generates health recommendations based on existing conditions and medicines."""
+        try:
+            conditions_str = ", ".join(conditions) if conditions else "None reported"
+            medications_str = ", ".join(medications) if medications else "None reported"
+            
+            prompt = (
+                f"Provide personalized health and wellness recommendations for a patient with the following profile:\n"
+                f"- Existing Health Conditions: {conditions_str}\n"
+                f"- Current Medications: {medications_str}\n"
+                f"Suggest lifestyle modifications, dietary advice, and general precautionary tips. "
+                f"Highlight any potential general food-drug or lifestyle interactions if visible."
+            )
+            
+            response = self.model.generate_content(prompt)
+            return {
+                "recommendations": response.text,
+                "conditions": conditions,
+                "medications": medications
+            }
+        except Exception as e:
+            raise Exception(f"Failed to fetch recommendations: {str(e)}")
