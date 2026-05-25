@@ -1,13 +1,12 @@
 import axios from 'axios';
 
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+const API_URL = process.env.REACT_APP_API_URL || "https://healthchat-application-tgt1.onrender.com";
 
 const api = axios.create({
-
   baseURL: process.env.NODE_ENV === 'production' 
-    ? 'https://healthchat-application.onrender.com' 
-    : 'http://localhost:5000'
+    ? 'https://healthchat-application-tgt1.onrender.com' 
+    : 'http://localhost:5000' // මෙන්න මේක අනිවාර්යයෙන්ම දාන්න!
 });
 
 // Request interceptor - add auth token
