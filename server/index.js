@@ -7,6 +7,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const { Server } = require('socket.io');
+const axios = require('axios'); 
 
 const connectDB = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
@@ -25,9 +26,13 @@ const aiRoutes = require('./routes/ai');
 const cloudinaryRoutes = require('./routes/cloudinary');
 const paymentRoutes = require('./routes/payments');
 
-const app = express();
-const server = http.createServer(app);
 
+const app = express();
+
+
+app.set('trust proxy', 1);
+
+const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
@@ -35,7 +40,7 @@ const io = new Server(server, {
     methods: ['GET', 'POST'],
     credentials: true,
   },
-  transports: ['websocket', 'polling'] // 👈 මේ පේළිය අලුතින් ඇතුළත් කරන්න!
+  transports: ['websocket', 'polling'] // 
 });
 
 // Connect Database
@@ -107,4 +112,10 @@ server.listen(PORT, () => {
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}\n`);
 });
 
+// 
+setInterval(() => {
+  axios.get('https://healthchat-application-1.onrender.com/health')
+    .then(() => console.log('💓 Server self-ping successful! Keeping alive...'))
+    .catch((err) => console.log('Ping failed: ', err.message));
+}, 10 * 60 * 1000); 
 module.exports = { app, server, io };
