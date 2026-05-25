@@ -1,8 +1,4 @@
-"""
-HealthChat AI Service — Google Gemini 2.5 Flash Implementation
-==============================================================
-Handles chat, symptom analysis, and health recommendations.
-"""
+
 
 import os
 import json

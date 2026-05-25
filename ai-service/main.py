@@ -1,20 +1,12 @@
-"""
-HealthChat AI Microservice — Google Gemini Only
-===============================================
-FastAPI service that powers the AI health assistant.
 
-Setup:
-  1. pip install -r requirements.txt
-  2. Create .env file with: GEMINI_API_KEY=your_key_here
-  3. uvicorn main:app --reload --port 8000
-
-Get free Gemini API key: https://aistudio.google.com/app/apikey
-"""
 
 import os
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers.ai_router import router as ai_router
+
+load_dotenv()
 
 app = FastAPI(
     title="HealthChat AI Service",
@@ -35,6 +27,7 @@ app.add_middleware(
 
 # Mount AI router
 app.include_router(ai_router, prefix="/ai", tags=["AI — Gemini"])
+
 
 
 @app.get("/", tags=["Health"])
@@ -68,4 +61,4 @@ if __name__ == "__main__":
     import uvicorn
   
     server_port = int(os.environ.get("PORT", 8000))
-    uvicorn.run("main:app", host="0.0.0.0", port=server_port, reload=False) # Production වලදී reload=False දාන්න
+    uvicorn.run("main:app", host="0.0.0.0", port=server_port, reload=False) 
