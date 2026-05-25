@@ -28,13 +28,14 @@ const paymentRoutes = require('./routes/payments');
 const app = express();
 const server = http.createServer(app);
 
-// Socket.io setup
+
 const io = new Server(server, {
   cors: {
     origin: process.env.CLIENT_URL || 'http://localhost:3000',
     methods: ['GET', 'POST'],
     credentials: true,
   },
+  transports: ['websocket', 'polling'] // 👈 මේ පේළිය අලුතින් ඇතුළත් කරන්න!
 });
 
 // Connect Database
