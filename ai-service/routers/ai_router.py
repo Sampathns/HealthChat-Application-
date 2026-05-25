@@ -1,3 +1,4 @@
+from fastapi import APIRouter  # 1. මේ ඉම්පෝර්ට් එක අනිවාර්යයෙන්ම තියෙන්න ඕනේ
 
 
 import os
@@ -7,7 +8,7 @@ from typing import List, Dict, Any
 
 # Configure Gemini API
 genai.configure(api_key=os.getenv("GEMINI_API_KEY", ""))
-
+ai_router = APIRouter()
 class AIService:
     def __init__(self):
         # ඩොක්ටර් කෙනෙක් වගේ වගකීමෙන් උත්තර දෙන්න AI එකට දෙන ප්‍රධාන උපදෙස (System Instruction)
@@ -21,7 +22,7 @@ class AIService:
         
         # ✅ පරණ gemini-pro වෙනුවට අලුත්ම gemini-2.5-flash එක මෙතනට දැම්මා
         self.model = genai.GenerativeModel(
-            model_name="gemini-2.5-flash",
+            model_name="gemini-1.5-flash",
             system_instruction=system_prompt
         )
 
@@ -47,7 +48,7 @@ class AIService:
         except Exception as e:
             raise Exception(f"Chat generation failed: {str(e)}")
 
-    async def analyze_symptoms(self, symptoms: List[str], age: int = None, gender: str = None) -> Dict[str, Any]:
+    async def analyze_symptoms(self, symptoms: List[str], age: int = None, gender: str = None) -> Dict[str, Any]: # type: ignore
         """Analyzes symptoms and returns structured information."""
         try:
             symptoms_str = ", ".join(symptoms)

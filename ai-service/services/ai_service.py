@@ -54,8 +54,8 @@ class AIService:
         try:
             # Gemini 2.5 Flash සඳහා නිවැරදි සහ සරලම Initialization එක
             self.model = genai.GenerativeModel(
-                model_name="gemini-2.5-flash",
-                system_instruction=SYSTEM_PROMPT,
+                model_name="gemini-1.5-flash",
+                system_instruction=SYSTEM_PROMPT,         
                 generation_config=genai.GenerationConfig(
                     temperature=0.7,
                     top_p=0.9,
@@ -63,7 +63,7 @@ class AIService:
                     max_output_tokens=1024,
                 )
             )
-            print("✅ Google Gemini AI (gemini-2.5-flash) initialized successfully")
+            print("✅ Google Gemini AI (gemini-1.5-flash) initialized successfully")
         except Exception as e:
             print(f"❌ Gemini setup error: {e}")
             self.model = None

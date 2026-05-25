@@ -5,7 +5,10 @@ HealthChat AI Microservice — Google Gemini 2.5 Flash
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers.ai_router import router 
+
+from routers.ai_router import ai_router as router
+
+
 
 app = FastAPI(
     title="HealthChat AI Service",
