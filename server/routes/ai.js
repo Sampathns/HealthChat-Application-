@@ -3,11 +3,14 @@ const router  = express.Router();
 const { protect } = require('../middleware/auth');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
+const apiKey = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : '';
+const genAI = apiKey ? new GoogleGenerativeAI({ apiKey }) : null;
+
 router.use(protect);
 
 router.get('/status', async (req, res) => {
-  if (!process.env.GEMINI_API_KEY) {
-    return res.json({ success: false, aiService: 'offline', message: 'API Key missing' });
+  if (!apiKey || !genAI) {
+    return res.json({ success: false, aiService: 'offline', message: 'GEMINI_API_KEY missing or invalid' });
   }
   res.json({ success: true, aiService: 'online', model: 'gemini-1.5-flash' });
 });
@@ -20,19 +23,14 @@ router.post('/chat', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Message is required' });
     }
 
-    // 🔑 රික්වෙස්ට් එක එන වෙලාවෙම API Key එක තියෙනවාද කියලා Double-Check කරනවා
-    const apiKey = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : null;
-    
-    if (!apiKey) {
-      return res.status(500).json({ 
-        success: false, 
-        message: 'Server Configuration Error: GEMINI_API_KEY is missing on Render.' 
+    if (!apiKey || !genAI) {
+      return res.status(500).json({
+        success: false,
+        message: 'Server misconfiguration: GEMINI_API_KEY is required',
       });
     }
 
-    // 🚀 හැමවෙලේම නිවැරදිව Client එක මෙතනදී Initialize වෙනවා
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
     
     const result = await model.generateContent(message);
     const response = await result.response;
@@ -60,12 +58,10 @@ router.post('/analyze-symptoms', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Symptoms are required' });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : null;
-    if (!apiKey) {
-      return res.status(500).json({ success: false, message: 'GEMINI_API_KEY is missing.' });
+    if (!apiKey || !genAI) {
+      return res.status(500).json({ success: false, message: 'Server misconfiguration: GEMINI_API_KEY is required' });
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
     const prompt = `You are an expert AI medical assistant. Analyze the following symptoms for a ${age} years old ${gender}. Symptoms: ${symptoms}. Provide a possible analysis and recommend next steps or precautions.`;
 
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
@@ -90,12 +86,10 @@ router.post('/recommendations', async (req, res) => {
   try {
     const { conditions, medications } = req.body;
 
-    const apiKey = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : null;
-    if (!apiKey) {
-      return res.status(500).json({ success: false, message: 'GEMINI_API_KEY is missing.' });
+    if (!apiKey || !genAI) {
+      return res.status(500).json({ success: false, message: 'Server misconfiguration: GEMINI_API_KEY is required' });
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
     const prompt = `A patient has the following medical conditions: ${conditions ? conditions.join(', ') : 'None'} and takes these medications: ${medications ? medications.join(', ') : 'None'}. Provide general health recommendations, lifestyle tips, and precautions.`;
 
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
