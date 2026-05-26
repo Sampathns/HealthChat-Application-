@@ -1,4 +1,3 @@
-cat > client/src/services/api.js << 'APIEOF'
 import axios from 'axios';
 
 const api = axios.create({
@@ -94,4 +93,3 @@ export const aiAPI = {
 };
 
 export default api;
-APIEOF
