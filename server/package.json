@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "seed": "node utils/seeder.js"
+    "seed": "node utils/seeder.js",
+    "unseed": "node utils/unseed.js"
   },
   "dependencies": {
     "@google/genai": "^2.6.0",
