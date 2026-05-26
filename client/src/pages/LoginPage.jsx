@@ -1,14 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { EyeIcon, EyeSlashIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import useAuthStore from '../context/authStore';
 import toast from 'react-hot-toast';
-
-const DEMO_ACCOUNTS = [
-  { role: 'patient', label: 'Patient',   email: 'patient@healthchat.com',  password: 'Patient@123', color: 'from-sky-500 to-sky-600',    emoji: '🧑‍⚕️' },
-  { role: 'doctor',  label: 'Doctor',    email: 'doctor1@healthchat.com',  password: 'Doctor@123',  color: 'from-emerald-500 to-emerald-600', emoji: '👨‍⚕️' },
-  { role: 'admin',   label: 'Admin',     email: 'admin@healthchat.com',    password: 'Admin@123',   color: 'from-violet-500 to-violet-600', emoji: '🛡️' },
-];
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -100,29 +94,6 @@ export default function LoginPage() {
             <p className="text-slate-500 dark:text-slate-400 mt-2 text-center lg:text-left text-sm">
               Sign in to your account to continue
             </p>
-          </div>
-
-          {/* Demo account pills */}
-          <div className="mb-6">
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">Quick demo access</p>
-            <div className="grid grid-cols-3 gap-2">
-              {DEMO_ACCOUNTS.map(({ label, email: e, password: p, color, emoji }) => (
-                <button key={label} onClick={() => { setEmail(e); setPassword(p); }}
-                  className={`flex flex-col items-center gap-1.5 py-2.5 px-2 rounded-xl bg-gradient-to-br ${color} text-white text-xs font-semibold shadow-sm hover:scale-105 transition-transform`}>
-                  <span className="text-base">{emoji}</span>
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="relative mb-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-200 dark:border-gray-700" />
-            </div>
-            <div className="relative flex justify-center">
-              <span className="bg-white dark:bg-gray-900 px-3 text-xs text-slate-400">or sign in with email</span>
-            </div>
           </div>
 
           {/* Form */}
