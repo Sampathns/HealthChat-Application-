@@ -1,13 +1,10 @@
+cat > client/src/services/api.js << 'APIEOF'
 import axios from 'axios';
 
-
-const API_URL = process.env.REACT_APP_API_URL || "https://healthchat-server.onrender.com/api";
-
 const api = axios.create({
-baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api'  // ✅ env var use කරනවා // මෙන්න මේක අනිවාර්යයෙන්ම දාන්න!
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
 });
 
-// Request interceptor - add auth token
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('healthchat_token');
@@ -17,7 +14,6 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor - handle auth errors
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -30,7 +26,6 @@ api.interceptors.response.use(
   }
 );
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
 export const authAPI = {
   register: (data) => api.post('/auth/register', data),
   login: (data) => api.post('/auth/login', data),
@@ -40,13 +35,11 @@ export const authAPI = {
   logout: () => api.post('/auth/logout'),
 };
 
-// ── Users ─────────────────────────────────────────────────────────────────────
 export const usersAPI = {
   getDoctors: (params) => api.get('/users/doctors', { params }),
   getDoctor: (id) => api.get(`/users/doctors/${id}`),
 };
 
-// ── Chat ──────────────────────────────────────────────────────────────────────
 export const chatAPI = {
   getConversations: () => api.get('/chat/conversations'),
   getMessages: (userId, params) => api.get(`/chat/messages/${userId}`, { params }),
@@ -57,7 +50,6 @@ export const chatAPI = {
   getChatUsers: () => api.get('/chat/users'),
 };
 
-// ── Appointments ──────────────────────────────────────────────────────────────
 export const appointmentsAPI = {
   getAppointments: (params) => api.get('/appointments', { params }),
   getAppointment: (id) => api.get(`/appointments/${id}`),
@@ -67,14 +59,12 @@ export const appointmentsAPI = {
   getAvailableSlots: (doctorId, date) => api.get(`/appointments/slots/${doctorId}`, { params: { date } }),
 };
 
-// ── Prescriptions ─────────────────────────────────────────────────────────────
 export const prescriptionsAPI = {
   getPrescriptions: () => api.get('/prescriptions'),
   getPrescription: (id) => api.get(`/prescriptions/${id}`),
   createPrescription: (data) => api.post('/prescriptions', data),
 };
 
-// ── Reports ───────────────────────────────────────────────────────────────────
 export const reportsAPI = {
   getReports:   () => api.get('/reports'),
   getReport:    (id) => api.get(`/reports/${id}`),
@@ -83,14 +73,12 @@ export const reportsAPI = {
   shareReport:  (id) => api.put(`/reports/${id}/share`),
 };
 
-// ── Notifications ─────────────────────────────────────────────────────────────
 export const notificationsAPI = {
   getNotifications: () => api.get('/notifications'),
   markRead: (id) => api.put(`/notifications/${id}/read`),
   markAllRead: () => api.put('/notifications/read-all'),
 };
 
-// ── Admin ─────────────────────────────────────────────────────────────────────
 export const adminAPI = {
   getAnalytics: () => api.get('/admin/analytics'),
   getUsers: (params) => api.get('/admin/users', { params }),
@@ -99,7 +87,6 @@ export const adminAPI = {
   getAppointments: () => api.get('/admin/appointments'),
 };
 
-// ── AI ────────────────────────────────────────────────────────────────────────
 export const aiAPI = {
   chat: (data) => api.post('/ai/chat', data),
   analyzeSymptoms: (data) => api.post('/ai/analyze-symptoms', data),
@@ -107,3 +94,4 @@ export const aiAPI = {
 };
 
 export default api;
+APIEOF
