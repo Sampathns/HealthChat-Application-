@@ -12,7 +12,7 @@ router.get('/status', async (req, res) => {
   if (!apiKey || !genAI) {
     return res.json({ success: false, aiService: 'offline', message: 'GEMINI_API_KEY missing or invalid' });
   }
-  res.json({ success: true, aiService: 'online', model: 'gemini-1.5-flash' });
+  res.json({ success: true, aiService: 'online', model: 'gemini-2.0-flash' });
 });
 
 router.post('/chat', async (req, res) => {
@@ -30,7 +30,7 @@ router.post('/chat', async (req, res) => {
       });
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
     
     const result = await model.generateContent(message);
     const response = await result.response;
@@ -64,7 +64,7 @@ router.post('/analyze-symptoms', async (req, res) => {
 
     const prompt = `You are an expert AI medical assistant. Analyze the following symptoms for a ${age} years old ${gender}. Symptoms: ${symptoms}. Provide a possible analysis and recommend next steps or precautions.`;
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
     const result = await model.generateContent(prompt);
     const response = await result.response;
 
@@ -92,7 +92,7 @@ router.post('/recommendations', async (req, res) => {
 
     const prompt = `A patient has the following medical conditions: ${conditions ? conditions.join(', ') : 'None'} and takes these medications: ${medications ? medications.join(', ') : 'None'}. Provide general health recommendations, lifestyle tips, and precautions.`;
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
     const result = await model.generateContent(prompt);
     const response = await result.response;
 
