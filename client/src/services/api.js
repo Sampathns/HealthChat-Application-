@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 
-const API_URL = process.env.REACT_APP_API_URL || "https://healthchat-application-tgt1.onrender.com";
+const API_URL = process.env.REACT_APP_API_URL || "https://healthchat-server.onrender.com/api";
 
 const api = axios.create({
 baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api'  // ✅ env var use කරනවා // මෙන්න මේක අනිවාර්යයෙන්ම දාන්න!
