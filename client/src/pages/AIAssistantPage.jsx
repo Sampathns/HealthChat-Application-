@@ -107,7 +107,7 @@ export default function AIAssistantPage() {
         gender: user?.gender,
       });
       setMessages(prev => prev.map(m => m.id === loadingMsg.id
-        ? { ...m, loading: false, content: data.analysis?.analysis || 'Unable to analyze symptoms at this time.' }
+        ? { ...m, loading: false, content: data.analysis || 'Unable to analyze symptoms at this time.' }
         : m
       ));
     } catch (e) {

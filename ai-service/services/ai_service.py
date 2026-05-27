@@ -1,15 +1,15 @@
 """
-HealthChat AI Microservice — Google Gemini 1.5 Flash
+HealthChat AI Microservice — Google Gemini 2.0 Flash
 """
 
 import os
-import google.generativeai as genai
-from typing import List, Optional, Dict, Any
+from google import genai
+from google.genai import types
+from typing import List, Optional
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# ── System prompt ──────────────────────────────────────────────────────────────
 SYSTEM_PROMPT = """You are HealthAssist AI, an intelligent healthcare assistant built into the HealthChat platform.
 You help patients and doctors with:
 - Symptom assessment and health triage
@@ -29,39 +29,25 @@ STRICT RULES — follow these always:
 7. Keep responses concise but thorough — use bullet points when listing items
 You ONLY use Google Gemini AI. Respond in the same language the user writes in."""
 
-# Configure Gemini API Globally
 GEMINI_KEY = os.getenv("GEMINI_API_KEY", "").strip()
-if GEMINI_KEY:
-    genai.configure(api_key=GEMINI_KEY)
 
 class AIService:
     def __init__(self):
         self.gemini_key = GEMINI_KEY
-        self.model = None
+        self.client = None
         self._setup_gemini()
 
     def _setup_gemini(self):
         if not self.gemini_key:
             print("⚠️ GEMINI_API_KEY not found. Running in FALLBACK mode.")
             return
-
         try:
-            self.model = genai.GenerativeModel(
-                model_name="gemini-2.0-flash",
-                system_instruction=SYSTEM_PROMPT,        
-                generation_config=genai.GenerationConfig(
-                    temperature=0.7,
-                    top_p=0.9,
-                    top_k=40,
-                    max_output_tokens=1024,
-                )
-            )
-            print("✅ Google Gemini AI (gemini-1.5-flash) initialized successfully")
+            self.client = genai.Client(api_key=self.gemini_key)
+            print("✅ Google Gemini AI (gemini-2.0-flash) initialized successfully")
         except Exception as e:
             print(f"❌ Gemini setup error: {e}")
-            self.model = None
+            self.client = None
 
-    # ── Main chat method (සම්පූර්ණ කරන ලදි) ──────────────────────────────────
     async def chat(
         self,
         message: str,
@@ -69,39 +55,44 @@ class AIService:
         user_role: str = "patient",
         user_name: str = "User",
     ) -> str:
-        if not self.model:
+        if not self.client:
             return self._fallback_response(message)
-        
+
         try:
+            # Build history for Gemini
             chat_history = []
             for h in (history or [])[-10:]:
-                # 'user' සහ 'model' යන roles දෙක පමණක් හඳුනා ගැනීම
                 role = "user" if h.get('role', 'user') == 'user' else 'model'
                 content = h.get('content', '')
-                
                 if content.strip():
-                    chat_history.append({"role": role, "parts": [content]})
+                    chat_history.append(types.Content(
+                        role=role,
+                        parts=[types.Part(text=content)]
+                    ))
 
-            # User context එකක් ලෙස එක් කිරීම
             context_prefix = f"[User: {user_name} | Role: {user_role}]\n"
             full_message = context_prefix + message
 
-            # Chat session ආරම්භ කිරීම
-            chat_session = self.model.start_chat(history=chat_history)
-            response = chat_session.send_message(full_message)
+            response = self.client.models.generate_content(
+                model="gemini-2.0-flash",
+                contents=chat_history + [types.Content(
+                    role="user",
+                    parts=[types.Part(text=full_message)]
+                )],
+                config=types.GenerateContentConfig(
+                    system_instruction=SYSTEM_PROMPT,
+                    temperature=0.7,
+                    top_p=0.9,
+                    top_k=40,
+                    max_output_tokens=1024,
+                )
+            )
             return response.text
 
         except Exception as e:
             print(f"❌ Gemini chat error: {e}")
-            try:
-                # History එකේ අවුලක් නම් පමණක් කෙලින්ම පණිවිඩය යැවීම
-                response = self.model.generate_content(full_message)
-                return response.text
-            except Exception as e2:
-                print(f"❌ Gemini retry error: {e2}")
-                return self._fallback_response(message)
+            return self._fallback_response(message)
 
-    # ── Symptom analysis ───────────────────────────────────────────────────────
     async def analyze_symptoms(
         self,
         symptoms: List[str],
@@ -111,10 +102,7 @@ class AIService:
         symptom_list = ", ".join(symptoms)
         age_str = f"{age} year old" if age else "unknown age"
         gender_str = gender or "person"
-
-        prompt = f"""A {age_str} {gender_str} is experiencing these symptoms: {symptom_list}
-Please provide a structured health assessment based on the system prompt rules."""
-
+        prompt = f"A {age_str} {gender_str} is experiencing these symptoms: {symptom_list}\nPlease provide a structured health assessment."
         response = await self.chat(prompt, [], "patient", "Patient")
         return {
             "symptoms": symptoms,
@@ -122,7 +110,6 @@ Please provide a structured health assessment based on the system prompt rules."
             "disclaimer": "⚠️ This analysis is AI-generated for informational purposes only. Please consult a licensed healthcare provider."
         }
 
-    # ── Health recommendations ─────────────────────────────────────────────────
     async def get_health_recommendations(
         self,
         conditions: List[str],
@@ -130,11 +117,7 @@ Please provide a structured health assessment based on the system prompt rules."
     ) -> dict:
         conditions_str = ", ".join(conditions) if conditions else "None specified"
         medications_str = ", ".join(medications) if medications else "None"
-
-        prompt = f"""Generate personalized health recommendations for someone with:
-- Medical conditions: {conditions_str}
-- Current medications: {medications_str}"""
-
+        prompt = f"Generate personalized health recommendations for someone with:\n- Medical conditions: {conditions_str}\n- Current medications: {medications_str}"
         response = await self.chat(prompt, [], "patient", "Patient")
         return {
             "conditions": conditions,
