@@ -20,7 +20,7 @@ router.use(protect);
 
 router.get('/status', (req, res) => {
   if (!apiKey || !ai) return res.json({ success: false, aiService: 'offline', message: 'GEMINI_API_KEY missing' });
-  res.json({ success: true, aiService: 'online', model: 'gemini-2.0-flash-lite' });
+  res.json({ success: true, aiService: 'online', model: 'gemini-2.0-flash' });
 });
 
 router.post('/chat', async (req, res) => {
@@ -39,7 +39,7 @@ router.post('/chat', async (req, res) => {
     contents.push({ role: 'user', parts: [{ text: message }] });
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-lite',
+      model: 'gemini-2.0-flash',
       contents,
       config: {
         systemInstruction: SYSTEM_PROMPT,
@@ -65,7 +65,7 @@ router.post('/analyze-symptoms', async (req, res) => {
     const prompt = `You are a medical AI assistant. A ${age || 'unknown age'} year old ${gender || 'person'} has these symptoms: ${Array.isArray(symptoms) ? symptoms.join(', ') : symptoms}. Provide a helpful health assessment and recommend next steps. Remind them to consult a doctor.`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-lite',
+      model: 'gemini-2.0-flash',
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: { systemInstruction: SYSTEM_PROMPT, temperature: 0.7, maxOutputTokens: 1024 },
     });
@@ -86,7 +86,7 @@ router.post('/recommendations', async (req, res) => {
     const prompt = `A patient has conditions: ${conditions?.join(', ') || 'None'} and takes medications: ${medications?.join(', ') || 'None'}. Provide general health recommendations, lifestyle tips, and precautions.`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-lite',
+      model: 'gemini-2.0-flash',
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: { systemInstruction: SYSTEM_PROMPT, temperature: 0.7, maxOutputTokens: 1024 },
     });
