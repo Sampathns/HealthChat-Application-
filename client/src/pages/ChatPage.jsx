@@ -11,7 +11,8 @@ import { useSocket } from '../context/SocketContext';
 import useAuthStore from '../context/authStore';
 import { format, isToday, isYesterday } from 'date-fns';
 import toast from 'react-hot-toast';
-
+import CallModal from '../components/call/CallModal';
+ 
 const AVATAR_GRADIENTS = [
   ['#0ea5e9','#0284c7'],['#8b5cf6','#7c3aed'],['#10b981','#059669'],
   ['#f59e0b','#d97706'],['#f43f5e','#e11d48'],['#14b8a6','#0d9488'],
@@ -27,18 +28,18 @@ const getDiceBearUrl = (name='') => {
   const i = (name.charCodeAt(0) || 0) % styles.length;
   return `https://api.dicebear.com/7.x/${styles[i]}/svg?seed=${seed}&backgroundColor=b6e3f4,c0aede`;
 };
-
+ 
 const getDateLabel = (date) => {
   if (isToday(new Date(date))) return 'Today';
   if (isYesterday(new Date(date))) return 'Yesterday';
   return format(new Date(date), 'MMMM d, yyyy');
 };
-
+ 
 const UserAvatar = ({ user, size='sm' }) => {
   const [imgFailed, setImgFailed] = useState(false);
   const sz = size === 'lg' ? 'w-12 h-12 rounded-2xl text-base' : size === 'md' ? 'w-10 h-10 rounded-xl text-sm' : 'w-8 h-8 rounded-xl text-xs';
   const gradient = getGradient(user?.name || '');
-
+ 
   if (user?.avatar && !imgFailed) {
     return <img src={user.avatar} alt={user.name} className={`${sz} object-cover flex-shrink-0`} onError={() => setImgFailed(true)} />;
   }
@@ -48,7 +49,7 @@ const UserAvatar = ({ user, size='sm' }) => {
     </div>
   );
 };
-
+ 
 const TypingIndicator = () => (
   <div className="flex items-end gap-2 mb-3">
     <div className="w-7 h-7 rounded-xl bg-slate-200 dark:bg-slate-700 flex-shrink-0" />
@@ -61,7 +62,7 @@ const TypingIndicator = () => (
     </div>
   </div>
 );
-
+ 
 const MessageBubble = ({ message, isOwn, showAvatar, sender }) => {
   const time = format(new Date(message.createdAt), 'HH:mm');
   return (
@@ -108,17 +109,18 @@ const MessageBubble = ({ message, isOwn, showAvatar, sender }) => {
     </div>
   );
 };
-
+ 
 export default function ChatPage() {
   const { userId: paramUserId } = useParams();
   const { user } = useAuthStore();
   const { socket, isUserOnline } = useSocket();
   const navigate = useNavigate();
-
+ 
   const [conversations, setConversations] = useState([]);
   const [chatUsers, setChatUsers] = useState([]);
   const [messages, setMessages] = useState([]);
   const [activeUser, setActiveUser] = useState(null);
+  const [callState, setCallState] = useState(null); // { targetUser, callType, isIncoming, offer }
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -128,7 +130,7 @@ export default function ChatPage() {
   const typingTimeout = useRef(null);
   const fileRef = useRef(null);
   const textareaRef = useRef(null);
-
+ 
   useEffect(() => { loadConversations(); loadChatUsers(); }, []);
   useEffect(() => {
     if (paramUserId && chatUsers.length > 0) {
@@ -136,7 +138,7 @@ export default function ChatPage() {
       if (u) openConversation(u);
     }
   }, [paramUserId, chatUsers]);
-
+ 
   useEffect(() => {
     if (!socket) return;
     socket.on('new_message', (msg) => {
@@ -148,11 +150,12 @@ export default function ChatPage() {
     });
     socket.on('typing_start', ({ senderId }) => { if (activeUser?._id === senderId) setIsTyping(true); });
     socket.on('typing_stop',  ({ senderId }) => { if (activeUser?._id === senderId) setIsTyping(false); });
-    return () => { socket.off('new_message'); socket.off('typing_start'); socket.off('typing_stop'); };
+    socket.on('incoming_call', ({ from, callType, offer }) => { setCallState({ targetUser: from, callType, isIncoming: true, offer }); });
+    return () => { socket.off('new_message'); socket.off('typing_start'); socket.off('typing_stop'); socket.off('incoming_call'); };
   }, [socket, activeUser]);
-
+ 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior:'smooth' }); }, [messages, isTyping]);
-
+ 
   const loadConversations = async () => {
     try { const { data } = await chatAPI.getConversations(); setConversations(data.conversations || []); } catch {}
   };
@@ -164,7 +167,7 @@ export default function ChatPage() {
     try { const { data } = await chatAPI.getMessages(usr._id); setMessages(data.messages || []); }
     catch {} finally { setLoading(false); }
   };
-
+ 
   const handleSend = async () => {
     if (!input.trim() || !activeUser || sending) return;
     const text = input.trim();
@@ -174,7 +177,7 @@ export default function ChatPage() {
     catch { toast.error('Failed to send message'); setInput(text); }
     finally { setSending(false); }
   };
-
+ 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file || !activeUser) return;
@@ -183,7 +186,7 @@ export default function ChatPage() {
     try { await chatAPI.sendMessage(fd); toast.success('File sent!'); }
     catch { toast.error('Upload failed'); }
   };
-
+ 
   const handleTyping = (val) => {
     setInput(val);
     if (!socket || !activeUser) return;
@@ -196,22 +199,33 @@ export default function ChatPage() {
       textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + 'px';
     }
   };
-
+ 
   const allUsers = [
     ...chatUsers,
     ...conversations.map(c => c.participant).filter(p => p && !chatUsers.find(u => u._id === p._id)),
   ].filter(Boolean);
   const filtered = allUsers.filter(u => u.name?.toLowerCase().includes(searchTerm.toLowerCase()));
-
+ 
   const msgsByDate = {};
   messages.forEach(m => {
     const d = getDateLabel(m.createdAt);
     if (!msgsByDate[d]) msgsByDate[d] = [];
     msgsByDate[d].push(m);
   });
-
+ 
   return (
     <div className="flex h-full overflow-hidden bg-slate-50 dark:bg-gray-950">
+      {callState && (
+        <CallModal
+          socket={socket}
+          currentUser={user}
+          targetUser={callState.targetUser}
+          callType={callState.callType}
+          isIncoming={callState.isIncoming}
+          offer={callState.offer}
+          onClose={() => setCallState(null)}
+        />
+      )}
       {/* ── Contacts sidebar ─────────────────────────── */}
       <div className={`${activeUser ? 'hidden lg:flex' : 'flex'} w-full lg:w-80 xl:w-96 flex-col bg-white dark:bg-gray-900 border-r border-slate-200 dark:border-gray-800 flex-shrink-0`}>
         {/* Header */}
@@ -223,7 +237,7 @@ export default function ChatPage() {
               className="flex-1 bg-transparent text-sm outline-none text-slate-800 dark:text-slate-200 placeholder:text-slate-400" />
           </div>
         </div>
-
+ 
         {/* Contact list */}
         <div className="flex-1 overflow-y-auto">
           {filtered.length === 0 && (
@@ -268,7 +282,7 @@ export default function ChatPage() {
           })}
         </div>
       </div>
-
+ 
       {/* ── Chat area ────────────────────────────────── */}
       {activeUser ? (
         <div className="flex-1 flex flex-col min-w-0">
@@ -278,7 +292,7 @@ export default function ChatPage() {
               className="lg:hidden p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-gray-800 transition-colors flex-shrink-0">
               <ArrowLeftIcon className="w-5 h-5 text-slate-600 dark:text-slate-400" />
             </button>
-
+ 
             <div className="relative flex-shrink-0">
               <div className="w-10 h-10 rounded-xl overflow-hidden" style={{ background: getGradient(activeUser.name) }}>
                 {activeUser.avatar
@@ -290,7 +304,7 @@ export default function ChatPage() {
                 <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 rounded-full border-2 border-white dark:border-gray-900" />
               )}
             </div>
-
+ 
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-sm text-slate-900 dark:text-white">{activeUser.name}</p>
               <p className="text-xs mt-0.5">
@@ -302,9 +316,9 @@ export default function ChatPage() {
                 }
               </p>
             </div>
-
+ 
             <div className="flex items-center gap-1 flex-shrink-0">
-              {[PhoneIcon, VideoCameraIcon].map((Icon, i) => (
+              {[{PhoneIcon, VideoCameraIcon}].map((Icon, i) => (
                 <button key={i} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-gray-800 transition-colors text-slate-500 hover:text-slate-700">
                   <Icon className="w-4.5 h-4.5" style={{ width:'18px', height:'18px' }} />
                 </button>
@@ -314,7 +328,7 @@ export default function ChatPage() {
               </button>
             </div>
           </div>
-
+ 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4" style={{ background:'#f8fafc' }}>
             {loading ? (
@@ -333,7 +347,7 @@ export default function ChatPage() {
                       </span>
                       <div className="flex-1 h-px bg-slate-200" />
                     </div>
-
+ 
                     {msgs.map((msg, i) => {
                       const isOwn = msg.sender?._id === user._id || msg.sender === user._id;
                       const showAvatar = !isOwn && (i === 0 || (msgs[i-1] && (msgs[i-1].sender?._id || msgs[i-1].sender) !== (msg.sender?._id || msg.sender)));
@@ -349,7 +363,7 @@ export default function ChatPage() {
               </>
             )}
           </div>
-
+ 
           {/* Input */}
           <div className="px-4 py-3 bg-white dark:bg-gray-900 border-t border-slate-200 dark:border-gray-800">
             <div className="flex items-end gap-2 p-2 rounded-2xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800 focus-within:border-sky-400 focus-within:bg-white dark:focus-within:bg-gray-800 transition-all">
