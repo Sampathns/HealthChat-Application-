@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { SocketProvider, useSocket } from './context/SocketContext';
+import { SocketProvider } from './context/SocketContext';
 import useAuthStore from './context/authStore';
 
 // Pages
@@ -18,7 +18,6 @@ import AdminPage from './pages/AdminPage';
 import ProfilePage from './pages/ProfilePage';
 import Layout from './components/shared/Layout';
 
-// Protected Route
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { isAuthenticated, user } = useAuthStore();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
@@ -26,7 +25,6 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   return children;
 };
 
-// Public Route
 const PublicRoute = ({ children }) => {
   const { isAuthenticated } = useAuthStore();
   return isAuthenticated ? <Navigate to="/dashboard" replace /> : children;
@@ -61,11 +59,8 @@ function App() {
           }}
         />
         <Routes>
-          {/* Public */}
           <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
           <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
-
-          {/* Protected */}
           <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
@@ -81,7 +76,6 @@ function App() {
               <ProtectedRoute allowedRoles={['admin']}><AdminPage /></ProtectedRoute>
             } />
           </Route>
-
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </SocketProvider>
