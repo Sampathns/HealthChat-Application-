@@ -9,8 +9,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import ChatPage from './pages/ChatPage';
-import CallModal from './components/call/CallModal';
-import AppointmentsPage from './pages/AppointmentsPage';
+
 import PrescriptionsPage from './pages/PrescriptionsPage';
 import ReportsPage from './pages/ReportsPage';
 import DoctorsPage from './pages/DoctorsPage';

@@ -11,7 +11,7 @@ import { useSocket } from '../context/SocketContext';
 import useAuthStore from '../context/authStore';
 import { format, isToday, isYesterday } from 'date-fns';
 import toast from 'react-hot-toast';
-import CallModal from '../components/call/CallModal';
+
  
 const AVATAR_GRADIENTS = [
   ['#0ea5e9','#0284c7'],['#8b5cf6','#7c3aed'],['#10b981','#059669'],

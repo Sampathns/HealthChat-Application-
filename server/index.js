@@ -29,36 +29,35 @@ const cloudinaryRoutes = require('./routes/cloudinary');
 const paymentRoutes = require('./routes/payments');
 
 const app = express();
+
+// Render.com reverse proxy trust (rate limit fix)
 app.set('trust proxy', 1);
 
 const server = http.createServer(app);
 
-// ✅ CLIENT_URL env var from Render — supports multiple origins
-const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:3000')
-  .split(',')
-  .map((o) => o.trim());
+// CLIENT_URL — Render env var or fallback
+const CLIENT_ORIGIN = process.env.CLIENT_URL || 'http://localhost:3000';
 
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: CLIENT_ORIGIN,
     methods: ['GET', 'POST'],
     credentials: true,
   },
   transports: ['websocket', 'polling'],
 });
 
+// Connect Database
 connectDB();
 
+// Security Middleware
 app.use(helmet());
 app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, etc.)
-    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-    callback(new Error('Not allowed by CORS'));
-  },
+  origin: CLIENT_ORIGIN,
   credentials: true,
 }));
 
+// Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
@@ -66,13 +65,16 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
+// Body parser
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-if (process.env.NODE_ENV === 'development') {
+// Logger
+if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev'));
 }
 
+// Make io available to routes
 app.use((req, res, next) => {
   req.io = io;
   next();
@@ -91,32 +93,36 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/cloudinary', cloudinaryRoutes);
 app.use('/api/payments', paymentRoutes);
 
+// Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), version: '1.0.0' });
 });
 
+// 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({ success: false, message: `Route ${req.originalUrl} not found` });
 });
 
+// Error handler
 app.use(errorHandler);
+
+// Initialize Socket.io
 initSocket(io);
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`\n🏥 HealthChat Server running on port ${PORT}`);
   console.log(`📡 Socket.io listening`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}\n`);
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🤖 Gemini API Key: ${process.env.GEMINI_API_KEY ? '✅ Set' : '❌ MISSING!'}\n`);
 });
 
-// ✅ Self-ping — uses SERVER_URL env var (set on Render), not hardcoded URL
-const SELF_URL = process.env.SERVER_URL;
-if (SELF_URL) {
-  setInterval(() => {
-    axios.get(`${SELF_URL}/health`)
-      .then(() => console.log('💓 Self-ping OK'))
-      .catch((err) => console.log('Ping failed:', err.message));
-  }, 10 * 60 * 1000);
-}
+// Self-ping — Render free tier sleep prevent (SERVER_URL env var use කරනවා)
+const SERVER_URL = process.env.SERVER_URL || `http://localhost:${PORT}`;
+setInterval(() => {
+  axios.get(`${SERVER_URL}/health`)
+    .then(() => console.log('💓 Self-ping OK'))
+    .catch((err) => console.log('Ping failed:', err.message));
+}, 10 * 60 * 1000);
 
 module.exports = { app, server, io };

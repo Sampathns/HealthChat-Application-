@@ -1,21 +1,21 @@
 # ====================================================================
 # render.yaml — HealthChat Application (Render Blueprint)
 # ====================================================================
-# INSTRUCTIONS:
-# 1. Deploy services in this ORDER: ai-service first, then server, then client
-# 2. After deploying ai-service & server, copy their URLs
-# 3. Set the environment variables below with real URLs in Render dashboard
+# DEPLOY ORDER:
+#   1. healthchat-ai    (Python FastAPI)
+#   2. healthchat-server (Node.js)
+#   3. healthchat-client (React Static)
 #
-# SECRET VARS (sync: false) — Must add these manually in Render dashboard:
-#   GROQ_API_KEY       → Google AI Studio: https://aistudio.google.com/apikey
-#   JWT_SECRET           → Any random 64-char string
-#   MONGODB_URI          → MongoDB Atlas free cluster URI
-#   CLOUDINARY_*         → Cloudinary dashboard credentials
+# REQUIRED SECRETS — add manually in Render Dashboard > Environment:
+#   GEMINI_API_KEY   → https://aistudio.google.com/apikey
+#   JWT_SECRET       → any random 64-char string
+#   MONGODB_URI      → MongoDB Atlas free cluster URI
+#   CLOUDINARY_*     → Cloudinary dashboard
 # ====================================================================
 
 services:
 
-  # ── STEP 1: Deploy this first ─────────────────────────────────
+  # ── STEP 1: AI Service (Python FastAPI + Gemini) ──────────────────
   - type: web
     name: healthchat-ai
     runtime: python
@@ -25,10 +25,10 @@ services:
     plan: free
     healthCheckPath: /health
     envVars:
-      - key: GROQ_API_KEY
+      - key: GEMINI_API_KEY
         sync: false
 
-  # ── STEP 2: Deploy after ai-service — set AI_SERVICE_URL first ─
+  # ── STEP 2: Node.js Server ────────────────────────────────────────
   - type: web
     name: healthchat-server
     runtime: node
@@ -46,25 +46,28 @@ services:
         value: 7d
       - key: MONGODB_URI
         sync: false
+      - key: GEMINI_API_KEY
+        sync: false
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_API_KEY
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
-      # ↓ After deploying ai-service, paste its URL here:
+      # Paste ai-service URL after deploying STEP 1
       # e.g. https://healthchat-ai.onrender.com
       - key: AI_SERVICE_URL
         sync: false
-      # ↓ After deploying client, paste its URL here:
+      # Paste client URL after deploying STEP 3
       # e.g. https://healthchat-client.onrender.com
       - key: CLIENT_URL
         sync: false
-      # ↓ This service's own URL (for self-ping keep-alive)
+      # This server's own URL (for keep-alive self-ping)
+      # e.g. https://healthchat-server.onrender.com
       - key: SERVER_URL
         sync: false
 
-  # ── STEP 3: Deploy last — set REACT_APP_* vars first ──────────
+  # ── STEP 3: React Client (Static Site) ───────────────────────────
   - type: web
     name: healthchat-client
     runtime: static
@@ -76,11 +79,11 @@ services:
         source: /*
         destination: /index.html
     envVars:
-      # ↓ After deploying server, paste its URL + /api
+      # Paste server URL + /api after deploying STEP 2
       # e.g. https://healthchat-server.onrender.com/api
       - key: REACT_APP_API_URL
         sync: false
-      # ↓ Server URL without /api (for Socket.io)
+      # Server URL without /api (Socket.io)
       # e.g. https://healthchat-server.onrender.com
       - key: REACT_APP_SOCKET_URL
         sync: false
