@@ -1,12 +1,15 @@
 const express = require('express');
 const router  = express.Router();
 const { protect } = require('../middleware/auth');
-const { GoogleGenAI } = require('@google/genai');
+const Groq = require('groq-sdk');
 
-const apiKey = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : '';
-const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
+const groq = process.env.GROQ_API_KEY
+  ? new Groq({ apiKey: process.env.GROQ_API_KEY.trim() })
+  : null;
 
-const SYSTEM_PROMPT = `You are HealthAssist AI, an intelligent healthcare assistant.
+const MODEL = 'llama-3.3-70b-versatile';
+
+const SYSTEM_PROMPT = `You are HealthAssist AI, an intelligent healthcare assistant built into the HealthChat platform.
 Help users with symptom assessment, health information, medication info, and wellness tips.
 RULES:
 - NEVER diagnose diseases — always say "consult a licensed physician"
@@ -19,39 +22,39 @@ RULES:
 router.use(protect);
 
 router.get('/status', (req, res) => {
-  if (!apiKey || !ai) return res.json({ success: false, aiService: 'offline', message: 'GEMINI_API_KEY missing' });
-  res.json({ success: true, aiService: 'online', model: 'gemini-2.0-flash' });
+  if (!groq) return res.json({ success: false, aiService: 'offline', message: 'GROQ_API_KEY missing' });
+  res.json({ success: true, aiService: 'online', model: MODEL });
 });
 
 router.post('/chat', async (req, res) => {
   try {
     const { message, history = [] } = req.body;
     if (!message) return res.status(400).json({ success: false, message: 'Message is required' });
-    if (!apiKey || !ai) return res.status(500).json({ success: false, message: 'GEMINI_API_KEY is not configured' });
+    if (!groq) return res.status(500).json({ success: false, message: 'GROQ_API_KEY is not configured' });
 
-    // Build conversation history
-    const contents = [];
+    const messages = [{ role: 'system', content: SYSTEM_PROMPT }];
+
     for (const h of (history || []).slice(-10)) {
       if (h.content?.trim()) {
-        contents.push({ role: h.role === 'assistant' || h.role === 'model' ? 'model' : 'user', parts: [{ text: h.content }] });
+        messages.push({
+          role: h.role === 'assistant' || h.role === 'model' ? 'assistant' : 'user',
+          content: h.content
+        });
       }
     }
-    contents.push({ role: 'user', parts: [{ text: message }] });
+    messages.push({ role: 'user', content: message });
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents,
-      config: {
-        systemInstruction: SYSTEM_PROMPT,
-        temperature: 0.7,
-        maxOutputTokens: 1024,
-      },
+    const response = await groq.chat.completions.create({
+      model: MODEL,
+      messages,
+      temperature: 0.7,
+      max_tokens: 1024,
     });
 
-    res.json({ success: true, reply: response.text });
+    res.json({ success: true, reply: response.choices[0].message.content });
 
   } catch (error) {
-    console.error('Gemini chat error:', error.message);
+    console.error('Groq chat error:', error.message);
     res.status(503).json({ success: false, message: 'AI සේවාව තාවකාලිකව අක්‍රීයයි. කරුණාවෙන් පසුව උත්සාහ කරන්න.' });
   }
 });
@@ -60,20 +63,24 @@ router.post('/analyze-symptoms', async (req, res) => {
   try {
     const { symptoms, age, gender } = req.body;
     if (!symptoms) return res.status(400).json({ success: false, message: 'Symptoms are required' });
-    if (!apiKey || !ai) return res.status(500).json({ success: false, message: 'GEMINI_API_KEY is not configured' });
+    if (!groq) return res.status(500).json({ success: false, message: 'GROQ_API_KEY is not configured' });
 
-    const prompt = `You are a medical AI assistant. A ${age || 'unknown age'} year old ${gender || 'person'} has these symptoms: ${Array.isArray(symptoms) ? symptoms.join(', ') : symptoms}. Provide a helpful health assessment and recommend next steps. Remind them to consult a doctor.`;
+    const prompt = `A ${age || 'unknown age'} year old ${gender || 'person'} has these symptoms: ${Array.isArray(symptoms) ? symptoms.join(', ') : symptoms}. Provide a helpful health assessment and recommend next steps. Remind them to consult a doctor.`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      config: { systemInstruction: SYSTEM_PROMPT, temperature: 0.7, maxOutputTokens: 1024 },
+    const response = await groq.chat.completions.create({
+      model: MODEL,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 1024,
     });
 
-    res.json({ success: true, analysis: response.text });
+    res.json({ success: true, analysis: response.choices[0].message.content });
 
   } catch (error) {
-    console.error('Symptom analysis error:', error.message);
+    console.error('Groq symptom error:', error.message);
     res.status(503).json({ success: false, message: 'AI service temporarily unavailable.' });
   }
 });
@@ -81,20 +88,24 @@ router.post('/analyze-symptoms', async (req, res) => {
 router.post('/recommendations', async (req, res) => {
   try {
     const { conditions, medications } = req.body;
-    if (!apiKey || !ai) return res.status(500).json({ success: false, message: 'GEMINI_API_KEY is not configured' });
+    if (!groq) return res.status(500).json({ success: false, message: 'GROQ_API_KEY is not configured' });
 
     const prompt = `A patient has conditions: ${conditions?.join(', ') || 'None'} and takes medications: ${medications?.join(', ') || 'None'}. Provide general health recommendations, lifestyle tips, and precautions.`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      config: { systemInstruction: SYSTEM_PROMPT, temperature: 0.7, maxOutputTokens: 1024 },
+    const response = await groq.chat.completions.create({
+      model: MODEL,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 1024,
     });
 
-    res.json({ success: true, recommendations: response.text });
+    res.json({ success: true, recommendations: response.choices[0].message.content });
 
   } catch (error) {
-    console.error('Recommendations error:', error.message);
+    console.error('Groq recommendations error:', error.message);
     res.status(503).json({ success: false, message: 'AI service temporarily unavailable.' });
   }
 });
