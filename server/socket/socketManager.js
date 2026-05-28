@@ -33,6 +33,10 @@ const initSocket = (io) => {
     // Broadcast online status
     socket.broadcast.emit('user_online', { userId, timestamp: new Date() });
 
+    // Send current online users list to newly connected user
+    const onlineUserIds = Array.from(onlineUsers.keys());
+    socket.emit('online_users_list', { userIds: onlineUserIds });
+
     // ── Typing events ──────────────────────────────────────────────────────
     socket.on('typing_start', ({ receiverId }) => {
       io.to(receiverId).emit('typing_start', { senderId: userId });
@@ -50,7 +54,7 @@ const initSocket = (io) => {
     // ── Video call signaling ────────────────────────────────────────────────
     socket.on('call_invite', ({ targetUserId, appointmentId, callType }) => {
       io.to(targetUserId).emit('incoming_call', {
-        from: { id: userId, name: socket.user.name, avatar: socket.user.avatar },
+        from: { _id: userId, id: userId, name: socket.user.name, avatar: socket.user.avatar },
         appointmentId, callType,
       });
     });
