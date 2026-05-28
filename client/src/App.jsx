@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { SocketProvider } from './context/SocketContext';
+import { SocketProvider, useSocket } from './context/SocketContext';
 import useAuthStore from './context/authStore';
 
 // Pages
@@ -9,7 +9,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import ChatPage from './pages/ChatPage';
-
+import AppointmentsPage from './pages/AppointmentsPage';
 import PrescriptionsPage from './pages/PrescriptionsPage';
 import ReportsPage from './pages/ReportsPage';
 import DoctorsPage from './pages/DoctorsPage';
@@ -26,7 +26,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   return children;
 };
 
-// Public Route (redirect if logged in)
+// Public Route
 const PublicRoute = ({ children }) => {
   const { isAuthenticated } = useAuthStore();
   return isAuthenticated ? <Navigate to="/dashboard" replace /> : children;
@@ -39,7 +39,6 @@ function App() {
     if (isAuthenticated) refreshUser();
   }, []);
 
-  // Dark mode
   useEffect(() => {
     const saved = localStorage.getItem('theme');
     if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
