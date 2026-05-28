@@ -1,7 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const { protect } = require('../middleware/auth');
-const Groq = require('groq-sdk');
+const Groq = require('groq');
 
 const groq = process.env.GROQ_API_KEY
   ? new Groq({ apiKey: process.env.GROQ_API_KEY.trim() })
