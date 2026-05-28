@@ -304,7 +304,7 @@ export default function ChatPage() {
             </div>
 
             <div className="flex items-center gap-1 flex-shrink-0">
-              {[{PhoneIcon, VideoCameraIcon}].map((Icon, i) => (
+              {[PhoneIcon, VideoCameraIcon].map((Icon, i) => (
                 <button key={i} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-gray-800 transition-colors text-slate-500 hover:text-slate-700">
                   <Icon className="w-4.5 h-4.5" style={{ width:'18px', height:'18px' }} />
                 </button>
