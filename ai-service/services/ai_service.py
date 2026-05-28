@@ -5,6 +5,7 @@ HealthChat AI Microservice — Google Gemini 2.0 Flash
 import os
 from google import genai
 from google.genai import types
+from typing import List, Optional
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -86,7 +87,7 @@ class AIService:
                     max_output_tokens=1024,
                 )
             )
-            return response.text
+            return response.text # type: ignore
 
         except Exception as e:
             print(f"❌ Gemini chat error: {e}")
