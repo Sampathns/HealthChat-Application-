@@ -9,11 +9,18 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line,
 } from 'recharts';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 import toast from 'react-hot-toast';
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const PIE_COLORS = ['#0ea5e9', '#10b981', '#8b5cf6', '#f59e0b'];
+
+// 🛡️ Safety Helper Function to prevent "Invalid time value" RangeError
+const safeFormat = (dateVal, formatStr = 'MMM d, yyyy', fallback = 'N/A') => {
+  if (!dateVal) return fallback;
+  const date = new Date(dateVal);
+  return isValid(date) ? format(date, formatStr) : fallback;
+};
 
 const StatCard = ({ label, value, icon: Icon, color, sub }) => (
   <div className="card p-5">
@@ -78,13 +85,13 @@ export default function AdminPage() {
   };
 
   const chartData = (analytics?.monthlyData || []).map(d => ({
-    month: MONTH_NAMES[(d._id.month || 1) - 1],
+    month: MONTH_NAMES[(d._id?.month || 1) - 1],
     appointments: d.count,
   }));
 
   const pieData = analytics ? [
-    { name: 'Patients', value: analytics.totalPatients },
-    { name: 'Doctors', value: analytics.totalDoctors },
+    { name: 'Patients', value: analytics.totalPatients || 0 },
+    { name: 'Doctors', value: analytics.totalDoctors || 0 },
   ] : [];
 
   const apptStatusData = [
@@ -227,7 +234,8 @@ export default function AdminPage() {
                         <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{u.email}</p>
                       </div>
                       <span className={`badge capitalize ${roleColors[u.role]}`}>{u.role}</span>
-                      <span className="text-xs text-slate-400">{format(new Date(u.createdAt), 'MMM d')}</span>
+                      {/* FIX 1: safeFormat Helper function */}
+                      <span className="text-xs text-slate-400">{safeFormat(u.createdAt, 'MMM d')}</span>
                     </div>
                   ))}
                 </div>
@@ -287,7 +295,8 @@ export default function AdminPage() {
                             </span>
                           </td>
                           <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">
-                            {format(new Date(u.createdAt), 'MMM d, yyyy')}
+                            {/* FIX 2: safeFormat Helper function */}
+                            {safeFormat(u.createdAt, 'MMM d, yyyy')}
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
@@ -353,7 +362,8 @@ export default function AdminPage() {
                           <p className="text-[11px] text-slate-400">{apt.doctor?.specialization}</p>
                         </td>
                         <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-400">
-                          {format(new Date(apt.date), 'MMM d, yyyy')} · {apt.startTime}
+                          {/* FIX 3: safeFormat Helper function */}
+                          {safeFormat(apt.date, 'MMM d, yyyy')} · {apt.startTime || 'N/A'}
                         </td>
                         <td className="px-4 py-3">
                           <span className="badge bg-slate-100 text-slate-600 dark:bg-gray-700 dark:text-slate-400 capitalize">{apt.type}</span>
